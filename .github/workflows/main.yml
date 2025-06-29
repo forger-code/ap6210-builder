@@ -1,0 +1,39 @@
+name: Build bcmdhd AP6210 Driver
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential bc kmod cpio flex bison libssl-dev libelf-dev wget unzip
+
+    - name: Clone bcmdhd source (AP6210)
+      run: |
+        git clone https://github.com/armStrapTools/ap6210 bcmdhd
+
+    - name: Download RK3229 Kernel Header (example)
+      run: |
+        mkdir kernel_headers
+        wget -O rk3229-kernel.zip https://github.com/rockchip-linux/kernel/archive/refs/heads/develop-4.4.zip
+        unzip rk3229-kernel.zip -d kernel_headers
+        mv kernel_headers/* kernel
+
+    - name: Build bcmdhd.ko
+      run: |
+        export ARCH=arm
+        export CROSS_COMPILE=arm-linux-gnueabihf-
+        export KERNELDIR=$GITHUB_WORKSPACE/kernel
+        cd bcmdhd
+        make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -C $KERNELDIR M=$(pwd) modules
+
+    - name: Upload bcmdhd.ko
+      uses: actions/upload-artifact@v4
+      with:
+        name: bcmdhd-ko
+        path: bcmdhd/bcmdhd.ko
